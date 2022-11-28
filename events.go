@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/r3labs/sse"
@@ -39,10 +41,21 @@ func sseHandler(h ParticleEventHandler) func(*sse.Event) {
 }
 
 func Subscribe(topic, token string, h ParticleEventHandler) {
-	url := fmt.Sprintf("https://api.particle.io/v1/events/%s?access_token=%s", topic, token)
+	segments := strings.Split(topic, "/")
+	url := fmt.Sprintf("https://api.particle.io/v1/events/%s?access_token=%s", segments[0], token)
 	client := sse.NewClient(url)
 
-	err := client.SubscribeRaw(sseHandler(h))
+	handler := h
+
+	h = func(event, data string) {
+		if event != topic {
+			return
+		}
+
+		handler(event, data)
+	}
+
+	err := client.Subscribe(filepath.Join(segments[1:]...), sseHandler(h))
 	if err != nil {
 		panic(err)
 	}
