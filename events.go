@@ -40,7 +40,7 @@ func sseHandler(h ParticleEventHandler) func(*sse.Event) {
 	}
 }
 
-func Subscribe(topic, token string, h ParticleEventHandler) {
+func Subscribe(topic, token string, h ParticleEventHandler) error {
 	segments := strings.Split(topic, "/")
 	url := fmt.Sprintf("https://api.particle.io/v1/events/%s?access_token=%s", segments[0], token)
 	client := sse.NewClient(url)
@@ -55,8 +55,11 @@ func Subscribe(topic, token string, h ParticleEventHandler) {
 		handler(event, data)
 	}
 
+	// client.Subscribe is a blocking operation
 	err := client.Subscribe(filepath.Join(segments[1:]...), sseHandler(h))
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return nil
 }
